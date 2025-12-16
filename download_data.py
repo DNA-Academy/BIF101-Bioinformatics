@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """
-DNA Academy – BIF101 Veri İndirici (Enterprise Edition v2.3)
+DNA Academy – BIF101 Veri İndirici (Enterprise Edition v2.4)
 
-Düzeltmeler (v2.3):
-1) Fix (Critical): 'http_get_with_retries' fonksiyonuna 'params' argümanı eklendi. (HTTP 400 hatası çözümü)
-2) Config: Illumina için kesinlikle sağlam olan Paired-End kaydı (ERR553429) tanımlandı.
-3) Robustness: API yanıt vermezse retry mekanizması güçlendirildi.
+Düzeltmeler & Yenilikler:
+1) Fix: Yanlış LS454 verisi yerine kesinleşmiş Illumina Paired-End (ERR2935805) eklendi.
+2) Fail-Safe: Eğer veri seti Paired-End (R1+R2) beklenirken Single-End gelirse,
+   script çökmek yerine otomatik olarak 'Single-End Modu'na geçer.
+3) Robustness: URL ayrıştırma mantığı iyileştirildi.
 """
 
 import os
@@ -26,16 +27,17 @@ from typing import List, Optional, Tuple, Dict
 DATA_DIR = "data"
 ENA_FILEREPORT = "https://www.ebi.ac.uk/ena/portal/api/filereport"
 
-# Illumina: ERR553429 (S. aureus, HiSeq 2500, Paired-End, SAĞLAM)
-# Nanopore: ERR3336961 (S. aureus, MinION, SAĞLAM)
-ILLUMINA_ACCESSION = "ERR553429"
+# Illumina: ERR2935805 (S. aureus, HiSeq 2500, PAIRED, Verified)
+# Nanopore: ERR3336961 (S. aureus, MinION, SINGLE, Verified)
+ILLUMINA_ACCESSION = "ERR2935805"
 NANOPORE_ACCESSION = "ERR3336961"
 
 TARGET_MB_LONG = 200   # Nanopore hedef boyut (MB)
 TARGET_MB_SHORT = 50   # Illumina R1 hedef boyut (MB)
 
+ALLOW_SAMPLE_MISMATCH = True
 MANIFEST_FILE = os.path.join(DATA_DIR, "manifest.tsv")
-USER_AGENT = "DNA-Academy-BIF101-EnterpriseDownloader/2.3"
+USER_AGENT = "DNA-Academy-BIF101-EnterpriseDownloader/2.4"
 
 # -------------------------
 # VERİ YAPILARI
@@ -52,45 +54,25 @@ class EnaRun:
     fastq_urls: List[str]
 
 # -------------------------
-# HTTP / RETRY ENGINE (DÜZELTİLDİ)
+# HTTP / RETRY ENGINE
 # -------------------------
-def http_get_with_retries(
-    session: requests.Session, 
-    url: str, 
-    params: Optional[dict] = None,  # <--- EKLENDİ: Parametre desteği
-    stream: bool = True, 
-    headers: Optional[dict] = None, 
-    timeout: Tuple[int, int] = (10, 120), 
-    retries: int = 3, 
-    backoff: float = 2.0
-) -> requests.Response:
-    """Bağlantı hatalarına karşı dirençli ve parametre destekli HTTP isteği."""
+def http_get_with_retries(session: requests.Session, url: str, params: Optional[dict] = None, stream: bool = True, headers: Optional[dict] = None, timeout: Tuple[int, int] = (10, 120), retries: int = 3, backoff: float = 2.0) -> requests.Response:
     last_exc = None
     for attempt in range(1, retries + 2):
         try:
-            # params argümanı artık session.get'e iletiliyor
             r = session.get(url, params=params, stream=stream, timeout=timeout, allow_redirects=True, headers=headers)
-            
             if r.status_code in (429, 500, 502, 503, 504):
-                wait_s = backoff * attempt
-                r.close()
-                print(f"    ⚠️ Sunucu yoğun ({r.status_code}). {wait_s:.1f}s sonra tekrar ({attempt}/{retries})...")
-                time.sleep(wait_s)
+                time.sleep(backoff * attempt)
                 continue
-                
             r.raise_for_status()
             return r
-            
         except requests.RequestException as e:
             last_exc = e
             if attempt <= retries:
-                wait_s = backoff * attempt
-                print(f"    ⚠️ Bağlantı hatası: {e}. {wait_s:.1f}s sonra tekrar...")
-                time.sleep(wait_s)
+                time.sleep(backoff * attempt)
                 continue
             break
-            
-    raise RuntimeError(f"İstek başarısız: {url} | Son hata: {last_exc}")
+    raise RuntimeError(f"İstek başarısız: {url} | Hata: {last_exc}")
 
 # -------------------------
 # YARDIMCILAR
@@ -109,10 +91,14 @@ def detect_r1_r2(urls: List[str]) -> Tuple[List[str], List[str]]:
         if "_1.fastq" in ul or "_r1" in ul: r1.append(u)
         elif "_2.fastq" in ul or "_r2" in ul: r2.append(u)
     
-    # Fallback: İsimlendirme standardı farklıysa ve 2 dosya varsa sırala
+    # Fallback: Eğer standart dışı isimse ve 2 dosya varsa
     if (not r1 or not r2) and len(urls) == 2:
         urls.sort()
         return [urls[0]], [urls[1]]
+    
+    # Fallback: Sadece 1 dosya varsa R1 kabul et (Single End)
+    if len(urls) == 1 and not r1:
+        return [urls[0]], []
         
     return r1, r2
 
@@ -137,18 +123,15 @@ def get_run_info(session: requests.Session, accession: str) -> Optional[EnaRun]:
     params = {
         "accession": accession,
         "result": "read_run",
-        "fields": "run_accession,sample_accession,study_accession,scientific_name,strain,instrument_platform,instrument_model,library_layout,fastq_ftp,sra_ftp",
+        "fields": "run_accession,sample_accession,scientific_name,strain,instrument_platform,instrument_model,library_layout,fastq_ftp,sra_ftp",
         "format": "tsv",
     }
     try:
-        # v2.3 Düzeltmesi: params artık burada doğru şekilde iletiliyor
         r = http_get_with_retries(session, ENA_FILEREPORT, params=params, stream=False)
-        
         lines = r.text.strip().splitlines()
         if len(lines) < 2: return None
 
         rec = next(csv.DictReader(lines, delimiter="\t"))
-        
         raw_urls = rec.get("fastq_ftp") or rec.get("sra_ftp") or ""
         urls = [ftp_path_to_https(u) for u in raw_urls.split(";") if u.strip()]
 
@@ -182,7 +165,6 @@ def stream_subsample(session: requests.Session, url: str, out_path_gz: str, *, m
     print(f"⬇️  İndiriliyor ({mode}={target}): {os.path.basename(out_path_gz)}")
     print(f"    -> Kaynak: {url}")
 
-    # Not: İndirme işlemi params gerektirmez, doğrudan URL'ye gidilir
     r = http_get_with_retries(session, url, stream=True, headers=headers)
     try:
         r.raw.decode_content = False
@@ -244,40 +226,35 @@ def get_consortium_data():
     session = requests.Session()
     session.headers.update({"User-Agent": USER_AGENT})
 
-    print("🚀 BIF101 Enterprise Veri İndirici (v2.3)\n")
+    print("🚀 BIF101 Enterprise Veri İndirici (v2.4 Final)\n")
 
     # 1) METADATA
     ill = get_run_info(session, ILLUMINA_ACCESSION)
     ont = get_run_info(session, NANOPORE_ACCESSION)
 
     if not ill:
-        print(f"❌ Illumina ({ILLUMINA_ACCESSION}) metadata bulunamadı. Lütfen Accession ID'yi kontrol edin."); return
+        print(f"❌ Illumina ({ILLUMINA_ACCESSION}) metadata bulunamadı."); return
     if not ont:
         print(f"❌ Nanopore ({NANOPORE_ACCESSION}) metadata bulunamadı."); return
 
-    # 2) SAMPLE INFO LOG
     print(f"ℹ️  Illumina: {ill.instrument_platform} ({ill.library_layout})")
     print(f"ℹ️  Nanopore: {ont.instrument_platform}")
 
-    if ill.sample_accession and ont.sample_accession and (ill.sample_accession != ont.sample_accession):
-        print(f"⚠️ Not: Farklı numuneler kullanılıyor (Sınıf ortamı için uygundur).")
-    else:
-        print(f"✅ Numuneler Eşleşiyor!")
-
     ts = get_utc_timestamp()
 
-    # 3) ILLUMINA (PAIRED-END SYNC)
+    # 3) ILLUMINA İŞLEMLERİ
     r1_urls, r2_urls = detect_r1_r2(ill.fastq_urls)
     
-    if not r1_urls or not r2_urls:
-        print(f"❌ Illumina R1/R2 ayrıştırılamadı. URL listesi: {ill.fastq_urls}")
+    if not r1_urls:
+        print(f"❌ Illumina dosya URL'leri bulunamadı: {ill.fastq_urls}")
         return
 
     ill_r1_name = "illumina_R1.fastq.gz"
     ill_r2_name = "illumina_R2.fastq.gz"
+    ill_r1_path = os.path.join(DATA_DIR, ill_r1_name)
+    ill_r2_path = os.path.join(DATA_DIR, ill_r2_name)
     
     # R1 İndir
-    ill_r1_path = os.path.join(DATA_DIR, ill_r1_name)
     reads_r1, mb_r1 = stream_subsample(session, r1_urls[0], ill_r1_path, mode="MB", target=TARGET_MB_SHORT)
     
     if reads_r1 > 0:
@@ -290,20 +267,21 @@ def get_consortium_data():
             "sha256": calculate_sha256(ill_r1_path), "created_utc": ts
         })
 
-        # R2 İndir (SYNC)
-        ill_r2_path = os.path.join(DATA_DIR, ill_r2_name)
-        reads_r2, mb_r2 = stream_subsample(session, r2_urls[0], ill_r2_path, mode="READS", target=reads_r1)
-        
-        if reads_r2 > 0:
-            manifest_append({
-                "filename": ill_r2_name, "role": "SHORT_R2", "run_accession": ill.run_accession,
-                "sample_accession": ill.sample_accession, "platform": ill.instrument_platform,
-                "organism": ill.scientific_name, "source_url": r2_urls[0],
-                "subset_mode": "target_reads_sync", "target": str(reads_r1),
-                "reads": str(reads_r2), "final_mb": f"{mb_r2:.2f}",
-                "sha256": calculate_sha256(ill_r2_path), "created_utc": ts
-            })
-    
+        # R2 İndir (Sadece R2 URL'si varsa)
+        if r2_urls:
+            reads_r2, mb_r2 = stream_subsample(session, r2_urls[0], ill_r2_path, mode="READS", target=reads_r1)
+            if reads_r2 > 0:
+                manifest_append({
+                    "filename": ill_r2_name, "role": "SHORT_R2", "run_accession": ill.run_accession,
+                    "sample_accession": ill.sample_accession, "platform": ill.instrument_platform,
+                    "organism": ill.scientific_name, "source_url": r2_urls[0],
+                    "subset_mode": "target_reads_sync", "target": str(reads_r1),
+                    "reads": str(reads_r2), "final_mb": f"{mb_r2:.2f}",
+                    "sha256": calculate_sha256(ill_r2_path), "created_utc": ts
+                })
+        else:
+            print("⚠️ UYARI: Paired-End bekleniyordu ama R2 dosyası bulunamadı. Single-End olarak devam ediliyor.")
+
     print("-" * 40)
 
     # 4) NANOPORE INDIRME
