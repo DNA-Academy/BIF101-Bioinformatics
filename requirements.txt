@@ -1,0 +1,6 @@
+pandas
+numpy
+plotly
+multiqc
+NanoPlot
+scipy
