@@ -1,62 +1,70 @@
-# 🧬 BIF101: Bioinformatics Data Analysis Pipeline
+# 🧬 BIF101: Biyoinformatik - Genomik Veri Analizlerine Giriş / Introduction to Genomic Data Analysis
 
 ![Version](https://img.shields.io/badge/version-4.0.3-blue)
 ![Platform](https://img.shields.io/badge/platform-Google%20Colab-orange)
 ![Course](https://img.shields.io/badge/course-BIF101-red)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Language](https://img.shields.io/badge/language-TR%20%7C%20EN-red)
 
-> DNA Academy BIF101 modülü için uçtan uca veri indirme, kalite kontrol ve raporlama altyapısı.  
-> An end-to-end data fetching, QC, and reporting toolkit for the DNA Academy BIF101 module.
-
----
-
-## 🎓 Biyoinformatik - Genomik Veri Analizlerine Giriş (BIF101)
-[cite_start]**"Genomik veri analizlerine sağlam bir adım; bilgi kirliliğinden uzak, yalın temellerle başlar."** [cite: 143]
-
-Bu depo, DNA Academy tarafından düzenlenen **Sertifika Eğitimi** kapsamında kullanılan resmi uygulama platformudur. [cite_start]Program, ham veri kalitesinin analiz başarısının %75'ini belirlediği vizyonuyla, katılımcılara çözüm odaklı bir biyoinformatik deneyimi sunar.
-
-### 🗓️ Eğitim Bilgileri & Kayıt / Enrollment
-Yeni dönem eğitim tarihleri, saatleri ve kontenjan bilgileri için aşağıdaki bağlantıları kullanabilirsiniz:
-
-[![Eğitim Takvimi](https://img.shields.io/badge/🗓️-Eğitim_Takvimi-blue?style=for-the-badge)](https://github.com/DNA-Academy/BIF101-Bioinformatics/tree/main/docs/tr/Egitim_Detaylari.md)
-[![Kayıt Ol](https://img.shields.io/badge/✍️-Şimdi_Kaydol-green?style=for-the-badge)](https://www.nardobiotech.com/dna-academy)
+> DNA Academy BIF101 modülü için uçtan uca veri edinimi, kalite kontrol ve uygulamalı analiz kütüphanesi.
+> An end-to-end data acquisition, QC, and applied analysis library for the DNA Academy BIF101 module.
 
 ---
 
-## 📚 Sertifika Programı Müfredatı | Course Curriculum
-[cite_start]Katılımcıların kodlama bilgisi gerekmeden [cite: 147] genomik veri analizlerini adım adım gerçekleştirmesini sağlayan modüllerimiz:
+## 🇹🇷 Hakkında / 🇺🇸 About
+DNA Academy BIF101 modülü için geliştirilmiş; genomik verilerin indirilmesi, kalite kontrolü ve biyoinformatik analizleri için tasarlanmış profesyonel bir eğitim ve uygulama kütüphanesidir. Küresel yazılım standartlarına (**src-layout**) uygun olarak yapılandırılan bu modül, Google Colab üzerinde tak-çalıştır deneyimi sunmak üzere optimize edilmiştir.
 
-1. [cite_start]**NGS ve 3. Nesil Dizileme:** Illumina, Ion Torrent ve ONT teknolojilerinin prensipleri[cite: 65, 87, 106].
-2. [cite_start]**Veri Kalite Kontrolü (QC):** FastQC ve NanoPlot ile ham veri değerlendirme ve temizleme[cite: 134, 143].
-3. [cite_start]**Hizalama (Mapping):** Minimap2 ve BWA ile referans genoma hizalama, SAM/BAM yönetimi[cite: 142].
-4. [cite_start]**Varyant Tespiti:** SNP ve Indel analizi, VCF dosyalarının yorumlanması[cite: 135].
-5. [cite_start]**Görselleştirme & Raporlama:** IGV kullanımı ve biyolojik anlamlandırma[cite: 142].
-6. **Biyoinformatik Platformlar:** Google Colab, Galaxy ve bulut tabanlı araçların etkin kullanımı.
+**"Genomik veri analizlerine sağlam bir adım; bilgi kirliliğinden uzak, yalın temellerle başlar... Ham veri kalitesi, analiz başarısının dörtte üçünü belirler."**
 
 ---
 
-## ✨ Öne Çıkan Özellikler | Key Features
+## 🚀 Hızlı Başlangıç | Quickstart (Colab)
 
-- [cite_start]**GenoStream v4.0.3:** NCBI & EBI/ENA entegrasyonu ile gerçek NGS (Illumina - Ion Torrent) ve ONT verileri üzerinde uygulamalı veri edinimi[cite: 65, 87, 106, 137].
-- **Resilient QC Pipeline:** FastQC / NanoPlot çıktılarını MultiQC altında birleştiren, Google Colab için stabilize edilmiş iş akışı.
-- **Interactive Visuals:** Plotly tabanlı, bellek dostu örnekleme yaklaşımıyla görselleştirme.
-
----
-
-## ✅ Destek Durumu | Support Status
-
-**Şu an hedeflenen / pratikte kullanılan:**
-- Google Colab (primary)
-- FASTQ tabanlı QC ve MultiQC raporlama
-
-**Genişletilebilir (yol haritası / senaryoya bağlı):**
-- [cite_start]Platform çeşitliliği (Illumina / ONT / PacBio / Ion Torrent) veri formatına ve indirme kaynağına bağlı olarak ele alınır[cite: 65, 68, 87, 106].
-
-> Not: Platform isimleri “cihaz” değil, üretilen verinin format ve QC karakteristiği bağlamında kullanılmaktadır.
+- 🗓️ **Güncel Eğitim Takvimi ve Detaylar / Training Schedule & Details:** [Egitim_Detaylari.md](docs/tr/Egitim_Detaylari.md)
+- ✍️ **Bilgi ve Kayıt / Info & Enrollment:** [www.dnaacademy.com.tr](https://www.dnaacademy.com.tr)
+- 📓 **Uygulama Rehberleri / Tutorials:** `notebooks/tr/` (Türkçe) & `notebooks/en/` (English)
 
 ---
 
-## 📂 Dosya Yapısı | Directory Structure
+## 📚 Sertifika Programı Müfredatı / Course Curriculum
+
+Program, katılımcıların kodlama bilgisi gerekmeden genomik veri analizlerini gerçekleştirmesini hedefler:
+
+1. **Eğitim Programının Tanıtımı ve Genel Bilgilendirme / Introduction to the Training Program and General Information**
+2. **Ham Genomik Veri ve Veri Formatları (FASTQ, vb.) / Raw Genomic Data and Data Formats (FASTQ, etc.)**
+3. **Biyoinformatik – Genomik Veri Analizlerine Giriş / Bioinformatics – Introduction to Genomic Data Analysis**
+4. **Veri Kalite Kontrolü ve Filtreleme Araçları / Data Quality Control and Filtering Tools**
+5. **Hizalama (Mapping) ve Veri İşleme Araçları / Alignment (Mapping) and Data Processing Tools**
+6. **Varyant Tespiti ve Analiz Araçları / Variant Calling and Analysis Tools**
+7. **Veri Görselleştirme ve Raporlama Araçları / Data Visualization and Reporting Tools**
+8. **Biyoinformatik Platformlar ve Bulut Sistemleri / Bioinformatics Platforms and Cloud Systems**
+9. **Deneysel Tasarım ve Uygulama Stratejileri / Experimental Design and Implementation Strategies**
+10. **Genomik Veri Analizlerinde Gelecek Perspektifleri / Future Perspectives in Genomic Data Analysis**
+11. **Vaka Sunumu ve Temel İş Akışı İncelemesi / Case Study and Core Workflow Review**
+12. **Uygulamalı Örnek Genomik Veri Analizi Demosu / Applied Sample Genomic Data Analysis Demo**
+
+---
+
+## ✨ Öne Çıkan Özellikler / Key Features
+
+- **GenoStream v4.0.3:** NCBI & EBI/ENA üzerinden akıllı veri edinimi / Smart data acquisition via NCBI & EBI/ENA.
+- **Resilient QC Pipeline:** Stabilize edilmiş kalite kontrol iş akışı / Stabilized quality control workflow.
+- **Interactive Visuals:** Bellek dostu görselleştirme motoru / Memory-efficient visualization engine.
+
+---
+
+## ✅ Destek Durumu / Support Status
+
+**Şu an hedeflenen / Current focus:**
+- **Google Colab (Primary):** Colab çalışma zamanı uyumluluğu / Colab runtime compatibility.
+- **FASTQ Tabanlı Analiz / FASTQ Based Analysis:** Ham veri işleme / Raw data processing.
+
+**Genişletilebilir / Roadmap:**
+- **Platform Çeşitliliği / Platform Diversity:** Illumina, Ion Torrent, PacBio, Oxford Nanopore.
+
+---
+
+## 📂 Dosya Yapısı / Directory Structure
 
 ```text
 ├── src/bif101/                 # Core Library / Çekirdek Kütüphane
@@ -64,7 +72,7 @@ Yeni dönem eğitim tarihleri, saatleri ve kontenjan bilgileri için aşağıdak
 │   ├── plotting.py             # Analysis & Dashboards / Görselleştirme
 │   ├── pipeline.py             # Workflow Management / İş Akışı
 │   └── utils.py                # Setup & Patches / Kurulum ve Onarım
-├── docs/                       # Curriculum & Guides / Müfredat & Rehber (TR/EN)
-├── notebooks/                  # Tutorials / Uygulama Rehberleri (TR/EN)
-├── data/                       # Local/Generated Data (gitignored)
-└── reports/                    # QC Reports (gitignored)
+├── docs/                       # Curriculum & Guides / Müfredat & Rehber
+├── notebooks/                  # Tutorials / Uygulama Rehberleri
+├── data/                       # Generated Data (gitignored) / Veri Havuzu
+└── reports/                    # QC Reports (gitignored) / Raporlar
