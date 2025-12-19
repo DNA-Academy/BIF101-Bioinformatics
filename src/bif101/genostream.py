@@ -5,6 +5,7 @@
 GenoStream v4.0.3 - Scientific Edition (Final)
 ----------------------------------------------
 Author: DNA Academy Team
+Modified: Path Fixed & Progress Bar Added
 """
 
 import os
@@ -15,6 +16,7 @@ import math
 import csv
 import time
 import urllib.parse
+from tqdm import tqdm  # İlerleme çubuğu eklendi
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
@@ -59,7 +61,6 @@ def fetch_metadata(organism, strategy):
     elif strategy == "AMPLICON": raw_query += ' AND library_strategy="AMPLICON"'
 
     safe_query = urllib.parse.quote(raw_query)
-    # Limit 200'e çıkarıldı (Long read bulma şansı için)
     final_url = f"{ENA_API_URL}?result=read_run&format=json&limit=200&fields={fields}&query={safe_query}"
 
     session = create_resilient_session()
@@ -113,7 +114,8 @@ def smart_select_and_download(metadata, target_platform, target_cov, genome_size
 
 def stream_download(acc, urls, needed_bases_total, output_dir, session, manifest_writer, platform_name):
     filenames = []
-    download_limit_bytes = 200 * 1024 * 1024
+    # Scientific Demo Limiti: 200MB (Workshop güvenliği için)
+    download_limit_bytes = 200 * 1024 * 1024 
     if needed_bases_total < 100000000: download_limit_bytes = 100 * 1024 * 1024
 
     for i, url in enumerate(urls):
@@ -125,23 +127,28 @@ def stream_download(acc, urls, needed_bases_total, output_dir, session, manifest
         elif not url.startswith("http"): full_url = f"http://{url}"
         else: full_url = url
 
-        print(f"   ⬇️ İndiriliyor (Stream): {filename} ...")
         try:
             with session.get(full_url, stream=True, timeout=30) as r:
                 r.raise_for_status()
-                with open(filepath, 'wb') as f:
-                    downloaded = 0
-                    for chunk in r.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            if downloaded >= download_limit_bytes:
-                                print(f"      ⏹️ Hedef boyuta ulaşıldı. Kesiliyor.")
-                                break
+                total_size = int(r.headers.get('content-length', 0))
+                
+                # TQDM Progress Bar Entegrasyonu
+                with tqdm(total=total_size, unit='B', unit_scale=True, desc=filename) as pbar:
+                    with open(filepath, 'wb') as f:
+                        downloaded = 0
+                        for chunk in r.iter_content(chunk_size=8192):
+                            if chunk:
+                                f.write(chunk)
+                                pbar.update(len(chunk))
+                                downloaded += len(chunk)
+                                if downloaded >= download_limit_bytes:
+                                    pbar.set_description(f"{filename} (Limit: 200MB)")
+                                    break
+            
             filenames.append(filename)
             manifest_writer.writerow({'filename': filename, 'organism': acc, 'platform': platform_name, 'filesize': downloaded})
         except Exception as e:
-            print(f"      ❌ İndirme hatası: {e}")
+            print(f"\n❌ İndirme hatası: {e}")
             if os.path.exists(filepath): os.remove(filepath)
             return False
     return True
@@ -153,11 +160,14 @@ def main():
     parser.add_argument("--cov-short", type=int, default=50)
     parser.add_argument("--cov-long", type=int, default=30)
     parser.add_argument("--genome-size", type=int)
+    # Yeni Özellik: Output Dir Parametresi
+    parser.add_argument("--output-dir", type=str, default="data")
     args = parser.parse_args()
 
-    data_dir = "data"
-    os.makedirs(data_dir, exist_ok=True)
-    manifest_path = os.path.join(data_dir, "manifest.tsv")
+    # Path Güvenliği: Eğer script notebooks klasöründen çağrılırsa bile data kök dizine gitmeli
+    # Ancak basitlik adına şimdilik verilen argümanı kullanıyoruz.
+    os.makedirs(args.output_dir, exist_ok=True)
+    manifest_path = os.path.join(args.output_dir, "manifest.tsv")
 
     file_exists = os.path.isfile(manifest_path)
     manifest_file = open(manifest_path, 'a', newline='')
@@ -170,8 +180,8 @@ def main():
     g_size = get_genome_size(args.organism, args.genome_size)
 
     print(f"\n🧬 İşlem Başlıyor: {args.organism} (Genom: {g_size/1e6:.2f} Mb)")
-    smart_select_and_download(metadata, "SHORT", args.cov_short, g_size, data_dir, session, writer)
-    smart_select_and_download(metadata, "LONG", args.cov_long, g_size, data_dir, session, writer)
+    smart_select_and_download(metadata, "SHORT", args.cov_short, g_size, args.output_dir, session, writer)
+    smart_select_and_download(metadata, "LONG", args.cov_long, g_size, args.output_dir, session, writer)
     manifest_file.close()
     print("\n✅ GenoStream v4.0.3 tamamlandı.")
 
