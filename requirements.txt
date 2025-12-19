@@ -1,6 +1,16 @@
+# BIF101 Environment Dependencies
+# Source: Colab End-to-End Successful Trial
+
+# Data & Network
 pandas
-numpy
-plotly
-multiqc
+requests
+tqdm
+
+# Bioinformatics Tools
+biopython
 NanoPlot
-scipy
+multiqc
+
+# Visualization (Fixed for Colab)
+plotly
+kaleido==0.2.1
